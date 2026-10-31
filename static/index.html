@@ -1402,8 +1402,11 @@
     </div>
 
     <!-- First-Time Onboarding Modal -->
-    <div class="modal-overlay" id="onboardingModal">
-        <div class="modal-card" style="max-width: 440px; text-align: center; padding: 34px 28px; border-radius: 24px;">
+    <div class="modal-overlay" id="onboardingModal" onclick="closeOnboardingModal(event)">
+        <div class="modal-card" style="max-width: 440px; text-align: center; padding: 34px 28px; border-radius: 24px; position: relative;" onclick="event.stopPropagation()">
+            <button class="drawer-close" onclick="closeOnboardingModal()" style="position: absolute; right: 16px; top: 16px;" title="关闭">
+                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
             <div style="width: 52px; height: 52px; border-radius: 50%; background: #f4efe6; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
                 <svg class="svg-icon" style="width: 26px; height: 26px; color: #8c7355;" viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"></path></svg>
             </div>
@@ -2403,18 +2406,33 @@
             }
         }
 
-        // First-Time Onboarding Setup
+        // First-Time Onboarding Setup (Only pops up when names have NEVER been initialized)
         function checkFirstTimeVisit() {
+            const initialized = localStorage.getItem('arch_name_initialized');
+            if (initialized === 'true') {
+                return; // Already initialized, never pop up again
+            }
+
             const storedUser = localStorage.getItem('dhome_arch_username');
             const storedCompanion = localStorage.getItem('dhome_arch_companion');
-            if (!storedUser || !storedCompanion) {
-                const modal = document.getElementById('onboardingModal');
-                if (modal) modal.classList.add('open');
-                const uInput = document.getElementById('onboardUserName');
-                const cInput = document.getElementById('onboardCompanionName');
-                if (uInput) uInput.value = storedUser || '我';
-                if (cInput) cInput.value = storedCompanion || 'AI伴侣';
+            if (storedUser && storedCompanion) {
+                localStorage.setItem('arch_name_initialized', 'true');
+                return;
             }
+
+            const modal = document.getElementById('onboardingModal');
+            if (modal) modal.classList.add('open');
+            const uInput = document.getElementById('onboardUserName');
+            const cInput = document.getElementById('onboardCompanionName');
+            if (uInput) uInput.value = storedUser || '我';
+            if (cInput) cInput.value = storedCompanion || 'AI伴侣';
+        }
+
+        function closeOnboardingModal(e) {
+            if (e && e.target !== document.getElementById('onboardingModal')) return;
+            localStorage.setItem('arch_name_initialized', 'true');
+            const modal = document.getElementById('onboardingModal');
+            if (modal) modal.classList.remove('open');
         }
 
         function finishOnboarding() {
@@ -2424,11 +2442,7 @@
             userSettings.companionName = cName;
             localStorage.setItem('dhome_arch_username', uName);
             localStorage.setItem('dhome_arch_companion', cName);
-
-            const uInput = document.getElementById('settingUserName');
-            const cInput = document.getElementById('settingCompanionName');
-            if (uInput) uInput.value = uName;
-            if (cInput) cInput.value = cName;
+            localStorage.setItem('arch_name_initialized', 'true');
 
             const modal = document.getElementById('onboardingModal');
             if (modal) modal.classList.remove('open');
