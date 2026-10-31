@@ -30,6 +30,7 @@ explore-arch-mcp/
 ├── LICENSE               # MIT 开源协议
 ├── .gitignore            # Git 忽略配置
 ├── README.md             # 项目说明文档
+├── CHANGELOG.md          # 版本更新历史记录
 └── static/
     └── index.html        # 单页面互动画布 UI (便签流、漫游卡片、收藏管理与搜索)
 ```
