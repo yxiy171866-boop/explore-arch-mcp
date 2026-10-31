@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D-Home · 建筑漫游</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400;1,600&family=Noto+Serif+SC:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-canvas: #f6f5f1;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --text-muted: #94a3b8;
+            --border-line: #e2e8f0;
+            --accent-warm: #9a3412;
+            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            --paper-bg: #faf9f5;
+            --paper-border: #e7e5dc;
+            --paper-fold: #dedbd0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-canvas);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
+            background-image: radial-gradient(#e5e5df 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .svg-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+            stroke: currentColor;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        }
+
+        /* Top Navigation Header */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: rgba(246, 245, 241, 0.94);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .back-btn {
+            background: #fff;
+            border: 1px solid var(--border-line);
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-main);
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .back-btn:hover {
+            transform: translateX(-2px);
+            background: #f8fafc;
+        }
+
+        .nav-title {
+            display: flex;
+            flex-direction: column;
+        }
+        .nav-title h1 {
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: #0f172a;
+        }
+        .nav-title span {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* Top Right Bookmark Tabs Row (漫游 / 历史 / 收藏 / 设置) */
+        .bookmark-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .bookmark-tabs::-webkit-scrollbar { display: none; }
+
+        .bookmark-tab {
+            position: relative;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 5px 12px 5px 9px;
+            border-radius: 4px 10px 4px 10px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: #334155;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            white-space: nowrap;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .bookmark-tab:hover {
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.07);
+        }
+        .bookmark-tab.active {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+        .bookmark-tab.active .svg-icon {
+            stroke: #ffffff;
+        }
+
+        /* Container */
+        .container {
+            max-width: 860px;
+            margin: 18px auto 0;
+            padding: 0 16px;
+        }
+
+        /* Architecture Hero Card */
+        .hero-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        /* Top Header bar right above image */
+        .hero-top-bar {
+            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 12px;
+        }
+
+        .hero-index-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 12px;
+        }
+
+        .structured-index-title {
+            font-family: 'Noto Serif SC', 'Playfair Display', serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 5px 14px;
+            border-radius: 6px;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .fav-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #94a3b8;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .fav-icon-btn:hover {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .fav-icon-btn.active {
+            color: #ef4444;
+        }
+        .fav-icon-btn.active .svg-icon {
+            fill: #ef4444;
+            stroke: #ef4444;
+        }
+
+        /* Image Frame */
+        .hero-image-wrap {
+            position: relative;
+            width: 100%;
+            height: 480px;
+            background: #0f172a;
+            overflow: hidden;
+        }
+
+        .hero-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .hero-image:hover {
+            transform: scale(1.02);
+        }
+
+        /* Project Info & Carousel Navigation Waist */
+        .hero-info-bar {
+            padding: 16px 20px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-line);
+            position: relative;
+        }
+
+        /* Waist Carousel Bar: Left Arrow <  Title & Meta  > Right Arrow */
+        .hero-waist-carousel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 10px;
+        }
+
+        .carousel-nav-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #334155;
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+        }
+        .carousel-nav-btn:hover {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+            transform: scale(1.05);
+        }
+
+        .hero-title-center {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+            margin-bottom: 4px;
+        }
+
+        .hero-meta-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .carousel-counter-badge {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-family: sans-serif;
+            background: #f1f5f9;
+            padding: 2px 7px;
+            border-radius: 10px;
+            margin-left: 6px;
+        }
+
+        .hero-desc-wrap {
+            margin-top: 14px;
+            margin-bottom: 14px;
+        }
+
+        .hero-desc {
+            font-size: 0.92rem;
+            line-height: 1.7;
+            color: #475569;
+        }
+
+        /* Muted Grey Source Link */
+        .source-link {
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.82rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: 8px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            transition: all 0.15s;
+        }
+        .source-link:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+            text-decoration: none;
+        }
+
+        /* Thumbnail Strip */
+        .thumbnail-strip {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            margin-top: 12px;
+            scrollbar-width: thin;
+        }
+        .thumbnail-item {
+            width: 68px;
+            height: 46px;
+            border-radius: 6px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.7;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .thumbnail-item:hover, .thumbnail-item.active {
+            opacity: 1;
+            border-color: #0f172a;
+        }
+
+        /* Notes Section */
+        .notes-section {
+            margin-top: 20px;
+        }
+
+        /* Note Header Row ("Note" on left, "贴张便签" & "收起便签" on right) */
+        .notes-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid #e2e8f0;
+        }
+
+        .notes-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+
+        .notes-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notes-count-pill {
+            font-family: sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            font-size: 0.84rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: #0f172a;
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background: #1e293b;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        .btn-text {
+            background: transparent;
+            color: var(--text-sub);
+            padding: 6px 8px;
+        }
+        .btn-text:hover {
+            color: var(--text-main);
+            background: #f1f5f9;
+        }
+
+        /* Notes Stream */
+        .notes-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.25s ease;
+        }
+
+        .notes-stream.collapsed .note-card {
+            display: none !important;
+        }
+
+        /* Stationery Paper Card (左上角翻页小折角，统一米白质感，紧凑留白) */
+        .note-card {
+            position: relative;
+            background: var(--paper-bg);
+            border: 1px solid var(--paper-border);
+            border-radius: 0 6px 6px 6px;
+            padding: 12px 16px 12px 18px;
+            box-shadow: 0 1px 4px rgba(45, 30, 20, 0.03);
+            transform: rotate(0deg) !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .note-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 3px 8px rgba(45, 30, 20, 0.05);
+        }
+
+        /* Left-top Folded Corner */
+        .note-card::before {
+            content: "";
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            width: 12px;
+            height: 12px;
+            background: var(--paper-fold);
+            border-bottom-right-radius: 3px;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--paper-border);
+            border-top: none;
+            border-left: none;
+        }
+
+        /* Note Author on Left Top (Small & Separate from body) */
+        .note-author-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .note-author-name {
+            font-family: 'Noto Serif SC', 'Playfair Display', serif;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #334155;
+            font-style: normal;
+        }
+
+        .note-header-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .note-time-label {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            font-family: sans-serif;
+            font-style: normal;
+        }
+
+        .note-delete-btn {
+            background: transparent;
+            border: none;
+            padding: 2px 4px;
+            cursor: pointer;
+            color: #94a3b8;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        .note-card:hover .note-delete-btn {
+            opacity: 0.9;
+        }
+        .note-delete-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+            opacity: 1;
+        }
+
+        /* Note Body text (No leading space, elegant italic serif) */
+        .note-body-text {
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-style: italic;
+            font-size: 0.96rem;
+            line-height: 1.6;
+            color: #1e293b;
+            white-space: pre-wrap;
+            letter-spacing: 0.01em;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Add Note Box (Hidden by default, shown when clicking '贴张便签') */
+        .add-note-card {
+            display: none;
+            background: #ffffff;
+            border: 1.5px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 14px;
+            transition: all 0.2s;
+        }
+        .add-note-card.active {
+            display: block;
+        }
+        .add-note-card:focus-within {
+            border-color: #0f172a;
+            background: #fafaf9;
+        }
+
+        .note-textarea {
+            width: 100%;
+            min-height: 60px;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: vertical;
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-style: italic;
+            font-size: 0.98rem;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        .note-textarea::placeholder {
+            color: #94a3b8;
+            font-style: normal;
+            font-size: 1.1rem;
+            letter-spacing: 0.1em;
+        }
+
+        .add-note-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        /* Drawers (History / Favorites / Settings) */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .drawer-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .drawer-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 440px;
+            max-width: 90vw;
+            background: #ffffff;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.15);
+            z-index: 55;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .drawer-overlay.open .drawer-panel {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafaf9;
+        }
+        .drawer-title {
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .drawer-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        .drawer-close:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+        }
+
+        .drawer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .drawer-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px;
+            background: #ffffff;
+            border: 1px solid var(--border-line);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .drawer-item:hover {
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+        }
+
+        .drawer-item-thumb {
+            width: 68px;
+            height: 68px;
+            border-radius: 6px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #e2e8f0;
+        }
+
+        .drawer-item-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .drawer-item-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .drawer-item-sub {
+            font-size: 0.76rem;
+            color: var(--text-sub);
+            margin-top: 3px;
+        }
+
+        .drawer-item-fav-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94a3b8;
+            padding: 6px;
+            border-radius: 4px;
+            align-self: center;
+        }
+        .drawer-item-fav-btn.active {
+            color: #ef4444;
+        }
+        .drawer-item-fav-btn.active .svg-icon {
+            fill: #ef4444;
+            stroke: #ef4444;
+        }
+
+        /* Settings Drawer Form Styling */
+        .settings-group {
+            background: #fafaf9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+        .settings-group-title {
+            font-size: 0.86rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .settings-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .settings-field label {
+            font-size: 0.78rem;
+            color: var(--text-sub);
+        }
+        .settings-input {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.88rem;
+            outline: none;
+        }
+        .settings-input:focus {
+            border-color: #0f172a;
+        }
+        .radio-options {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .radio-chip {
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.8rem;
+            cursor: pointer;
+            background: #fff;
+            color: #475569;
+            transition: all 0.15s;
+        }
+        .radio-chip.active {
+            background: #0f172a;
+            color: #fff;
+            border-color: #0f172a;
+        }
+
+        .guide-box {
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: #475569;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .guide-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .guide-heading {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 0.82rem;
+            margin-bottom: 4px;
+        }
+        .guide-text {
+            color: #475569;
+            font-size: 0.78rem;
+            line-height: 1.55;
+        }
+        .guide-text code {
+            background: #e2e8f0;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.74rem;
+            color: #0f172a;
+            font-family: monospace;
+        }
+
+        /* "漫游" Modal Card (No '设为展品' button) */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(8px);
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 680px;
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.96) translateY(10px);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.open .modal-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-top-bar {
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-line);
+            background: #fafaf9;
+            gap: 12px;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-image-wrap {
+            width: 100%;
+            height: 340px;
+            background: #0f172a;
+            position: relative;
+        }
+        .modal-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .modal-info-wrap {
+            padding: 18px 22px;
+        }
+
+        .modal-title {
+            font-family: 'Playfair Display', 'Noto Serif SC', serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .modal-meta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+        }
+
+        .modal-desc {
+            font-size: 0.9rem;
+            line-height: 1.65;
+            color: #475569;
+        }
+
+        .modal-footer {
+            padding: 12px 18px;
+            border-top: 1px solid var(--border-line);
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        /* Toast Component */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(30px);
+            background: #0f172a;
+            color: #ffffff;
+            padding: 9px 18px;
+            border-radius: 30px;
+            font-size: 0.86rem;
+            font-weight: 500;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 99;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Daemon Shares Floating Notification Banner */
+        .daemon-share-banner {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: #2b2621;
+            color: #faf9f5;
+            padding: 10px 22px;
+            border-radius: 30px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            font-size: 0.88rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            animation: bannerSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            min-width: 480px;
+            max-width: 90vw;
+            box-sizing: border-box;
+        }
+        @keyframes bannerSlideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .daemon-share-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+        #daemonShareText {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+        .daemon-share-content .svg-icon {
+            width: 16px;
+            height: 16px;
+            color: #d4a373;
+            flex-shrink: 0;
+        }
+        .daemon-share-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .daemon-share-view-btn {
+            background: #d4a373;
+            color: #2b2621;
+            border: none;
+            padding: 4px 14px;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .daemon-share-view-btn:hover {
+            background: #e6b88a;
+        }
+        .daemon-share-close-btn {
+            background: none;
+            border: none;
+            color: #a8a29e;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 4px;
+            line-height: 1;
+        }
+        .daemon-share-close-btn:hover {
+            color: #faf9f5;
+        }
+
+        /* Drawer Search Box */
+        .drawer-search-wrap {
+            position: relative;
+            padding: 12px 18px 8px;
+            background: #fbf9f4;
+            display: flex;
+            align-items: center;
+        }
+        .drawer-search-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 7px 32px 7px 32px;
+            border-radius: 20px;
+            border: 1px solid #dfd7cc;
+            background: #ffffff;
+            font-size: 0.8rem;
+            color: #2b2621;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .drawer-search-input:focus {
+            border-color: #8c7355;
+            box-shadow: 0 0 0 2px rgba(140, 115, 85, 0.15);
+        }
+        .drawer-search-wrap .search-icon {
+            position: absolute;
+            left: 28px;
+            width: 14px;
+            height: 14px;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+        .drawer-search-clear {
+            position: absolute;
+            right: 26px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        .drawer-search-clear:hover {
+            color: #2b2621;
+        }
+
+        /* Drawer Tag Filter Chips */
+        .drawer-tag-filters {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 10px 18px 12px;
+            border-bottom: 1px solid #f1ede4;
+            background: #fbf9f4;
+            scrollbar-width: none;
+        }
+        .drawer-tag-filters::-webkit-scrollbar {
+            display: none;
+        }
+        .tag-chip {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            background: #f0ebe1;
+            color: #5c4d3c;
+            border: 1px solid #e2d9cb;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .tag-chip:hover {
+            background: #e6ded0;
+        }
+        .tag-chip.active {
+            background: #2b2621;
+            color: #faf9f5;
+            border-color: #2b2621;
+        }
+        .drawer-item-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .item-tag-badge {
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: #f0ebe1;
+            color: #786f66;
+            border: 1px solid #e5ded3;
+        }
+
+        @media (max-width: 640px) {
+            .hero-image-wrap { height: 320px; }
+            .hero-title { font-size: 1.3rem; }
+            .navbar { padding: 10px 14px; }
+            .container { padding: 0 10px; }
+            .modal-image-wrap { height: 230px; }
+            .bookmark-tabs { max-width: 65%; }
+            .daemon-share-banner { min-width: auto; width: 92vw; padding: 8px 14px; }
+            #daemonShareText { max-width: 170px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Daemon Shares Floating Banner -->
+    <div id="daemonShareBanner" class="daemon-share-banner" style="display:none;">
+        <div class="daemon-share-content">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            <span id="daemonShareText">收到来自伴侣的新分享！</span>
+        </div>
+        <div class="daemon-share-actions">
+            <button class="daemon-share-view-btn" onclick="viewDaemonShare()">立即查看</button>
+            <button class="daemon-share-close-btn" onclick="dismissDaemonShare()">✕</button>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-left">
+            <button class="back-btn" onclick="location.href='index.html'" title="返回首页">
+                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div class="nav-title">
+                <h1>建筑漫游</h1>
+                <span>Architecture</span>
+            </div>
+        </div>
+
+        <!-- Horizontal Bookmarks (漫游 / 历史 / 收藏 / 设置) -->
+        <div class="bookmark-tabs">
+            <button class="bookmark-tab" id="tabRoamBtn" onclick="openRandomModal()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                <span>漫游</span>
+            </button>
+            <button class="bookmark-tab" id="tabHistoryBtn" onclick="openDrawer('history')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>历史</span>
+            </button>
+            <button class="bookmark-tab" id="tabFavBtn" onclick="openDrawer('favorites')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                <span>收藏</span>
+            </button>
+            <button class="bookmark-tab" id="tabSettingsBtn" onclick="openDrawer('settings')" title="设置与说明" style="padding: 5px 8px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Main Architecture Hero Showcase Card -->
+        <section class="hero-card" id="heroCard">
+            <!-- Header bar with structured title taking full width + favorite icon -->
+            <div class="hero-top-bar">
+                <div class="hero-index-group">
+                    <span class="structured-index-title" id="heroStructuredTitle">[加载中...]</span>
+                    <button class="fav-icon-btn" id="heroFavBtn" onclick="toggleHeroFavorite()" title="加入收藏">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Architectural Main Image -->
+            <div class="hero-image-wrap">
+                <img id="heroImage" class="hero-image" src="" alt="Architecture Image">
+            </div>
+
+            <!-- Project Details & Waist Carousel Navigation -->
+            <div class="hero-info-bar">
+                <!-- Waist Carousel Row: < Left Arrow | Title & Meta | Right Arrow > -->
+                <div class="hero-waist-carousel">
+                    <button class="carousel-nav-btn" id="carouselPrevBtn" onclick="navigateCarousel(-1)" title="上一个收藏/展品">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+
+                    <div class="hero-title-center">
+                        <h2 class="hero-title" id="heroTitle">加载中...</h2>
+                        <div class="hero-meta-strip" id="heroMetaStrip">
+                            <div class="meta-item">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                <span id="heroArchitect">--</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                <span id="heroLocation">--</span>
+                            </div>
+                            <div class="meta-item">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                <span id="heroYear">--</span>
+                            </div>
+                            <span class="carousel-counter-badge" id="carouselCounter">展品</span>
+                        </div>
+                    </div>
+
+                    <button class="carousel-nav-btn" id="carouselNextBtn" onclick="navigateCarousel(1)" title="下一个收藏/展品">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                </div>
+
+                <div class="hero-desc-wrap">
+                    <span class="hero-desc" id="heroDesc">--</span>
+                    <a href="#" target="_blank" rel="noopener noreferrer" class="source-link" id="heroSourceLink">跳转原文 ↗</a>
+                </div>
+
+                <!-- Gallery Thumbnails Strip -->
+                <div class="thumbnail-strip" id="thumbnailStrip"></div>
+            </div>
+        </section>
+
+        <!-- Notes Section (Heading renamed to "Note", "贴张便签" moved to right) -->
+        <section class="notes-section">
+            <div class="notes-header-bar">
+                <div class="notes-heading">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Note</span>
+                    <span class="notes-count-pill" id="notesCountPill">0</span>
+                </div>
+
+                <div class="notes-header-actions">
+                    <button class="btn btn-secondary" onclick="toggleAddNoteBox()">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        <span>贴张便签</span>
+                    </button>
+                    <button class="btn btn-text" id="toggleNotesBtn" onclick="toggleNotesCollapse()">
+                        <svg class="svg-icon" id="toggleNotesIcon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <span id="toggleNotesText">收起便签</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Notes Stream -->
+            <div class="notes-stream" id="notesStream">
+                <!-- Dynamically rendered paper notes -->
+            </div>
+
+            <!-- Write New Note Box (Hidden by default, shown when clicking '贴张便签') -->
+            <div class="add-note-card" id="noteInputCard">
+                <textarea class="note-textarea" id="noteInput" placeholder="..."></textarea>
+                <div class="add-note-footer">
+                    <button class="btn btn-primary" onclick="submitNote()">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span>贴上去</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Drawer: History / Favorites / Settings -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer(event)">
+        <aside class="drawer-panel" onclick="event.stopPropagation()">
+            <div class="drawer-header">
+                <div class="drawer-title" id="drawerTitle">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>历史足迹</span>
+                </div>
+                <button class="drawer-close" onclick="closeDrawer()">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="drawerSearchWrap" class="drawer-search-wrap" style="display:none;">
+                <svg class="svg-icon search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="favSearchInput" class="drawer-search-input" placeholder="搜索收藏（关键词、建筑师、城市、#标签）..." oninput="handleFavSearchInput()">
+                <button id="favSearchClearBtn" class="drawer-search-clear" onclick="clearFavSearch()" style="display:none;" title="清除搜索">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="drawerTagFilters" class="drawer-tag-filters" style="display:none;"></div>
+            <div class="drawer-content" id="drawerList">
+                <!-- Dynamically rendered history / favorites / settings -->
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modal: "漫游" Random Big Card (No '设为展品' button) -->
+    <div class="modal-overlay" id="randomModal" onclick="closeRandomModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-top-bar">
+                <span class="structured-index-title" id="modalStructuredTitle">[探索中...]</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="fav-icon-btn" id="modalFavBtn" onclick="toggleModalFavorite()" title="收藏">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    </button>
+                    <button class="drawer-close" onclick="closeRandomModal()">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-image-wrap">
+                    <img class="modal-image" id="modalImage" src="" alt="Random Architecture">
+                </div>
+                <div class="modal-info-wrap">
+                    <h3 class="modal-title" id="modalTitle">--</h3>
+                    <div class="modal-meta-row">
+                        <div class="meta-item">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span id="modalArchitect">--</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            <span id="modalLocation">--</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span id="modalYear">--</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="modal-desc" id="modalDesc">--</span>
+                        <a href="#" target="_blank" rel="noopener noreferrer" class="source-link" id="modalSourceLink">跳转原文 ↗</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="recommendCurrentRandomToDaemon()">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    <span>转给他</span>
+                </button>
+                <button class="btn btn-secondary" onclick="fetchNextRandom()">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                    <span>再抽一个</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- First-Time Onboarding Modal -->
+    <div class="modal-overlay" id="onboardingModal">
+        <div class="modal-card" style="max-width: 440px; text-align: center; padding: 34px 28px; border-radius: 24px;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: #f4efe6; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <svg class="svg-icon" style="width: 26px; height: 26px; color: #8c7355;" viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"></path></svg>
+            </div>
+            <h2 style="font-family: serif; font-size: 1.35rem; color: #2b2621; margin: 0 0 8px;">欢迎来到建筑漫游</h2>
+            <p style="font-size: 0.85rem; color: #786f66; margin: 0 0 24px; line-height: 1.5;">探索世界建筑之美。在开启前，请为你们设置专属的交流称谓：</p>
+            
+            <div style="text-align: left; margin-bottom: 16px;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #5c4d3c; margin-bottom: 6px;">你的名字</label>
+                <input id="onboardUserName" type="text" value="我" placeholder="例如：建筑迷" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 12px; border: 1px solid #dfd7cc; background: #faf9f5; font-size: 0.9rem; color: #2b2621; outline: none;">
+            </div>
+
+            <div style="text-align: left; margin-bottom: 24px;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #5c4d3c; margin-bottom: 6px;">伴侣的名字</label>
+                <input id="onboardCompanionName" type="text" value="AI伴侣" placeholder="例如：Claude" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 12px; border: 1px solid #dfd7cc; background: #faf9f5; font-size: 0.9rem; color: #2b2621; outline: none;">
+            </div>
+
+            <button onclick="finishOnboarding()" style="width: 100%; padding: 12px; border-radius: 14px; background: #2b2621; color: #faf9f5; font-size: 0.92rem; font-weight: 500; border: none; cursor: pointer; transition: background 0.2s;">开启漫游之旅</button>
+        </div>
+    </div>
+
+    <!-- Toast Component -->
+    <div class="toast" id="toast">
+        <svg class="svg-icon" id="toastIcon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="toastMsg">提示消息</span>
+    </div>
+
+    <script>
+        let currentProject = null;
+        let currentNotes = [];
+        let isNotesCollapsed = false;
+        let currentRandomProject = null;
+        let currentDrawerMode = 'history';
+
+        // Carousel items
+        let carouselProjects = [];
+        let carouselCurrentIndex = 0;
+
+        // User Settings (Stored in localStorage)
+        let userSettings = {
+            userName: localStorage.getItem('dhome_arch_username') || '我',
+            companionName: localStorage.getItem('dhome_arch_companion') || 'AI伴侣',
+            language: localStorage.getItem('dhome_arch_lang') || 'zh', // 'zh', 'en', 'bilingual'
+        };
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            if (icon) {
+                if (type === 'error') {
+                    icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>';
+                } else {
+                    icon.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
+                }
+            }
+            document.getElementById('toastMsg').innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        async function loadCurrentProject() {
+            try {
+                const res = await fetch('/api/architecture/current');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentProject = data.project;
+                    currentNotes = data.notes || [];
+                    renderHero(currentProject, data.is_favorite);
+                    renderNotes(currentNotes);
+                    await loadCarouselList();
+                }
+            } catch (err) {
+                console.error('Failed to load current project:', err);
+                showToast('加载建筑信息失败，请稍后刷新重试');
+            }
+        }
+
+        // Load Carousel List for Waist Arrow Navigation (Strictly Favorites)
+        async function loadCarouselList() {
+            try {
+                const res = await fetch('/api/architecture/carousel');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    carouselProjects = data.items || [];
+                    if (currentProject) {
+                        const idx = carouselProjects.findIndex(p => p.id === currentProject.id);
+                        carouselCurrentIndex = idx;
+                    } else {
+                        carouselCurrentIndex = -1;
+                    }
+                    updateCarouselBadge();
+                }
+            } catch (err) {
+                console.error('Failed to load carousel:', err);
+            }
+        }
+
+        function updateCarouselBadge() {
+            const badge = document.getElementById('carouselCounter');
+            const prevBtn = document.getElementById('carouselPrevBtn');
+            const nextBtn = document.getElementById('carouselNextBtn');
+
+            if (carouselProjects.length <= 1) {
+                if (prevBtn) prevBtn.style.visibility = 'hidden';
+                if (nextBtn) nextBtn.style.visibility = 'hidden';
+
+                if (carouselProjects.length === 1 && carouselCurrentIndex >= 0) {
+                    badge.style.display = 'inline-block';
+                    badge.innerText = '已收藏';
+                } else if (currentProject) {
+                    badge.style.display = 'inline-block';
+                    badge.innerText = '当前展品';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } else {
+                if (prevBtn) prevBtn.style.visibility = 'visible';
+                if (nextBtn) nextBtn.style.visibility = 'visible';
+
+                badge.style.display = 'inline-block';
+                if (carouselCurrentIndex >= 0) {
+                    badge.innerText = `${carouselCurrentIndex + 1} / ${carouselProjects.length}`;
+                } else {
+                    badge.innerText = `展品 (${carouselProjects.length} 收藏)`;
+                }
+            }
+        }
+
+        async function navigateCarousel(direction) {
+            if (carouselProjects.length <= 1) {
+                return;
+            }
+            if (carouselCurrentIndex < 0) {
+                carouselCurrentIndex = 0;
+            } else {
+                carouselCurrentIndex = (carouselCurrentIndex + direction + carouselProjects.length) % carouselProjects.length;
+            }
+            const target = carouselProjects[carouselCurrentIndex];
+            await switchToProject(target.id);
+            updateCarouselBadge();
+        }
+
+        function renderHero(p, isFav) {
+            let structuredTitle = p.structured_title || p.title;
+            let displayTitle = p.title || '建筑作品';
+            let displayLocation = p.location || p.city || p.country || '全球';
+
+            if (userSettings.language === 'zh') {
+                structuredTitle = p.structured_title_zh || p.structured_title || p.title_zh || p.title;
+                displayTitle = p.title_zh || p.title || '建筑作品';
+                displayLocation = p.location_zh || p.location || p.city || p.country || '全球';
+            } else if (userSettings.language === 'en') {
+                structuredTitle = p.structured_title_en || p.structured_title || p.title_en || p.title;
+                displayTitle = p.title_en || p.title || 'Architecture';
+                displayLocation = p.location_en || p.location || p.city || p.country || 'Global';
+            } else if (userSettings.language === 'bilingual') {
+                structuredTitle = p.structured_title_zh || p.structured_title;
+                displayTitle = (p.title_zh && p.title_en && p.title_zh !== p.title_en)
+                    ? `${p.title_zh} / ${p.title_en}`
+                    : (p.title_zh || p.title);
+                displayLocation = (p.location_zh && p.location_en && p.location_zh !== p.location_en)
+                    ? `${p.location_zh} (${p.location_en})`
+                    : (p.location_zh || p.location);
+            }
+
+            document.getElementById('heroStructuredTitle').innerText = structuredTitle;
+            document.getElementById('heroTitle').innerText = displayTitle;
+            document.getElementById('heroImage').src = p.cover_image || '';
+            document.getElementById('heroArchitect').innerText = p.architect || '未知建筑师';
+            document.getElementById('heroLocation').innerText = displayLocation;
+            document.getElementById('heroYear').innerText = p.year ? (userSettings.language === 'en' ? p.year : p.year + '年') : (userSettings.language === 'en' ? 'Recent' : '近代');
+
+            // Multi-language Description rendering
+            const descEl = document.getElementById('heroDesc');
+            const linkEl = document.getElementById('heroSourceLink');
+            
+            let descText = '';
+            const zhText = p.description_zh || p.description || '';
+            const enText = p.description_en || '';
+
+            if (userSettings.language === 'en') {
+                descText = enText || zhText;
+            } else if (userSettings.language === 'bilingual' && zhText && enText && zhText !== enText) {
+                descText = `${zhText}\n\n[EN] ${enText}`;
+            } else {
+                descText = zhText || enText || '精选现代建筑设计作品。';
+            }
+
+            descEl.innerText = descText;
+
+            // Source link (Grey)
+            if (p.source_url) {
+                linkEl.href = p.source_url;
+                linkEl.style.display = 'inline-flex';
+            } else {
+                linkEl.style.display = 'none';
+            }
+
+            // Favorite button
+            const favBtn = document.getElementById('heroFavBtn');
+            if (isFav) favBtn.classList.add('active');
+            else favBtn.classList.remove('active');
+
+            // Thumbnail gallery
+            const strip = document.getElementById('thumbnailStrip');
+            strip.innerHTML = '';
+            const imgs = p.images || [];
+            if (imgs.length > 1) {
+                imgs.forEach((imgUrl, idx) => {
+                    const thumb = document.createElement('img');
+                    thumb.src = imgUrl;
+                    thumb.className = 'thumbnail-item' + (idx === 0 ? ' active' : '');
+                    thumb.onclick = () => {
+                        document.getElementById('heroImage').src = imgUrl;
+                        document.querySelectorAll('.thumbnail-item').forEach(t => t.classList.remove('active'));
+                        thumb.classList.add('active');
+                    };
+                    strip.appendChild(thumb);
+                });
+                strip.style.display = 'flex';
+            } else {
+                strip.style.display = 'none';
+            }
+        }
+
+        // Render Paper Notes (Author name on top-left, small and separate from body, trash delete btn)
+        function renderNotes(notes) {
+            const stream = document.getElementById('notesStream');
+            stream.innerHTML = '';
+            document.getElementById('notesCountPill').innerText = notes.length;
+
+            if (notes.length === 0) {
+                stream.innerHTML = '<div style="color: #94a3b8; font-style: italic; text-align: center; padding: 16px; font-family: serif; font-size: 0.9rem;">暂无便签，点击右上角「贴张便签」写下第一句感想吧...</div>';
+                return;
+            }
+
+            notes.forEach(n => {
+                const card = document.createElement('div');
+                card.className = 'note-card';
+
+                const authorName = (n.author || userSettings.companionName).trim();
+                const timeStr = (n.created_at || '').substring(0, 16).replace('T', ' ');
+
+                card.innerHTML = `
+                    <div class="note-author-header">
+                        <span class="note-author-name">${escapeHtml(authorName)}：</span>
+                        <div class="note-header-right">
+                            <span class="note-time-label">${timeStr}</span>
+                            <button class="note-delete-btn" title="删除便签" onclick="deleteNoteWithConfirm(${n.id})">
+                                <svg class="svg-icon" width="12" height="12" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="note-body-text">${escapeHtml(n.content.trim())}</div>
+                `;
+                stream.appendChild(card);
+            });
+        }
+
+        async function loadProjectNotes(pid) {
+            try {
+                const res = await fetch('/api/architecture/current');
+                const data = await res.json();
+                if (data.status === 'success' && data.notes) {
+                    currentNotes = data.notes;
+                    renderNotes(currentNotes);
+                }
+            } catch (err) {
+                console.error('Failed to load project notes:', err);
+            }
+        }
+
+        async function deleteNoteWithConfirm(noteId) {
+            if (!confirm('请确认是否删除该便签？此操作不可撤销。')) {
+                return;
+            }
+            try {
+                const res = await fetch(`/api/architecture/notes/${noteId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentNotes = currentNotes.filter(n => n.id !== noteId);
+                    renderNotes(currentNotes);
+                    showToast('便签已删除');
+                } else {
+                    showToast('删除失败: ' + (data.detail || '未知错误'), 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('删除失败，请稍后重试', 'error');
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Toggle Notes Collapse (Properly hides all notes without duplicate banner)
+        function toggleNotesCollapse() {
+            isNotesCollapsed = !isNotesCollapsed;
+            const stream = document.getElementById('notesStream');
+            const txt = document.getElementById('toggleNotesText');
+            const icon = document.getElementById('toggleNotesIcon');
+
+            if (isNotesCollapsed) {
+                stream.classList.add('collapsed');
+                txt.innerText = '展开便签';
+                icon.innerHTML = '<polyline points="18 15 12 9 6 15"></polyline>';
+            } else {
+                stream.classList.remove('collapsed');
+                txt.innerText = '收起便签';
+                icon.innerHTML = '<polyline points="6 9 12 15 18 9"></polyline>';
+            }
+        }
+
+        // Toggle '贴张便签' Input Box Visibility
+        function toggleAddNoteBox() {
+            const card = document.getElementById('noteInputCard');
+            const isActive = card.classList.contains('active');
+            if (isActive) {
+                card.classList.remove('active');
+            } else {
+                card.classList.add('active');
+                card.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('noteInput').focus();
+            }
+        }
+
+        async function submitNote() {
+            const input = document.getElementById('noteInput');
+            const text = input.value.trim();
+            if (!text) {
+                showToast('请先输入便签内容...');
+                return;
+            }
+            if (!currentProject) return;
+
+            try {
+                const res = await fetch('/api/architecture/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: currentProject.id,
+                        content: text,
+                        author: userSettings.userName
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    input.value = '';
+                    document.getElementById('noteInputCard').classList.remove('active');
+                    currentNotes.push(data.note);
+                    if (isNotesCollapsed) toggleNotesCollapse();
+                    renderNotes(currentNotes);
+                    showToast('便签已贴好！');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('提交便签失败');
+            }
+        }
+
+        async function toggleHeroFavorite() {
+            if (!currentProject) return;
+            try {
+                let tags = null;
+                const heroBtn = document.getElementById('heroFavBtn');
+                const willFavorite = !heroBtn.classList.contains('active');
+                if (willFavorite) {
+                    const prefill = (currentProject.tags || []).slice(0, 3).join(', ');
+                    const tagsInput = prompt('为这座建筑添加分类标签（可选，多个标签用逗号隔开，如：清水混凝土, 光影, 教堂）：', prefill);
+                    if (tagsInput !== null && tagsInput.trim()) {
+                        tags = tagsInput.split(/[,， ]+/).map(t => t.trim()).filter(Boolean);
+                    } else if (tagsInput !== null) {
+                        tags = (currentProject.tags || []).slice(0, 3);
+                    }
+                }
+
+                const res = await fetch('/api/architecture/favorite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: currentProject.id,
+                        structured_title: currentProject.structured_title,
+                        favorited_by: 'User',
+                        tags: tags
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (data.is_favorite) {
+                        heroBtn.classList.add('active');
+                        showToast('已加入建筑收藏');
+                    } else {
+                        heroBtn.classList.remove('active');
+                        showToast('已取消收藏');
+                    }
+                    await loadCarouselList();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        let currentSelectedTag = null;
+        let loadedFavorites = [];
+
+        // Drawer Operations (History / Favorites / Settings)
+        async function openDrawer(mode) {
+            currentDrawerMode = mode;
+            const overlay = document.getElementById('drawerOverlay');
+            const title = document.getElementById('drawerTitle');
+            const tabHist = document.getElementById('tabHistoryBtn');
+            const tabFav = document.getElementById('tabFavBtn');
+            const tabSet = document.getElementById('tabSettingsBtn');
+            const searchWrap = document.getElementById('drawerSearchWrap');
+            const tagFiltersEl = document.getElementById('drawerTagFilters');
+
+            tabHist.classList.remove('active');
+            tabFav.classList.remove('active');
+            tabSet.classList.remove('active');
+            searchWrap.style.display = 'none';
+            tagFiltersEl.style.display = 'none';
+
+            if (mode === 'history') {
+                tabHist.classList.add('active');
+                title.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> <span>历史足迹</span>';
+                await loadHistoryList();
+            } else if (mode === 'favorites') {
+                tabFav.classList.add('active');
+                title.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg> <span>建筑收藏</span>';
+                searchWrap.style.display = 'flex';
+                tagFiltersEl.style.display = 'flex';
+                const searchInp = document.getElementById('favSearchInput');
+                if (searchInp) searchInp.value = '';
+                const clearBtn = document.getElementById('favSearchClearBtn');
+                if (clearBtn) clearBtn.style.display = 'none';
+                currentSelectedTag = null;
+                await loadFavoriteTagChips();
+                await loadFavoritesList();
+            } else if (mode === 'settings') {
+                tabSet.classList.add('active');
+                title.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> <span>设置与使用说明</span>';
+                renderSettingsPanel();
+            }
+
+            overlay.classList.add('open');
+        }
+
+        async function loadFavoriteTagChips() {
+            const container = document.getElementById('drawerTagFilters');
+            try {
+                const res = await fetch('/api/architecture/favorite-tags');
+                const data = await res.json();
+                const tags = (data.status === 'success' && data.tags) ? data.tags : [];
+                
+                let html = `<button class="tag-chip ${!currentSelectedTag ? 'active' : ''}" onclick="selectFavoriteTag(null)">全部</button>`;
+                tags.forEach(t => {
+                    const isActive = currentSelectedTag === t;
+                    html += `<button class="tag-chip ${isActive ? 'active' : ''}" onclick="selectFavoriteTag('${escapeHtml(t)}')">#${escapeHtml(t)}</button>`;
+                });
+                container.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function handleFavSearchInput() {
+            const query = (document.getElementById('favSearchInput').value || '').trim();
+            const clearBtn = document.getElementById('favSearchClearBtn');
+            if (clearBtn) clearBtn.style.display = query ? 'flex' : 'none';
+            filterAndRenderFavorites();
+        }
+
+        function clearFavSearch() {
+            const input = document.getElementById('favSearchInput');
+            if (input) input.value = '';
+            const clearBtn = document.getElementById('favSearchClearBtn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            filterAndRenderFavorites();
+        }
+
+        function selectFavoriteTag(tag) {
+            currentSelectedTag = tag;
+            loadFavoriteTagChips();
+            filterAndRenderFavorites();
+        }
+
+        function filterAndRenderFavorites() {
+            const searchVal = (document.getElementById('favSearchInput')?.value || '').trim().toLowerCase();
+            const cleanQuery = searchVal.startsWith('#') ? searchVal.slice(1).trim() : searchVal;
+
+            let filtered = loadedFavorites;
+
+            // 1. Tag chip filter
+            if (currentSelectedTag) {
+                filtered = filtered.filter(item => {
+                    const tags = (item.tags || []).map(t => String(t).toLowerCase());
+                    return tags.includes(currentSelectedTag.toLowerCase());
+                });
+            }
+
+            // 2. Keyword query filter (title, architect, country, city, location, tags, notes)
+            if (cleanQuery) {
+                filtered = filtered.filter(item => {
+                    const title = (item.title || '').toLowerCase();
+                    const titleZh = (item.title_zh || '').toLowerCase();
+                    const sTitle = (item.structured_title || '').toLowerCase();
+                    const sTitleZh = (item.structured_title_zh || '').toLowerCase();
+                    const architect = (item.architect || '').toLowerCase();
+                    const location = (item.location || '').toLowerCase();
+                    const locationZh = (item.location_zh || '').toLowerCase();
+                    const note = (item.note || '').toLowerCase();
+                    const tags = (item.tags || []).map(t => String(t).toLowerCase());
+
+                    return title.includes(cleanQuery)
+                        || titleZh.includes(cleanQuery)
+                        || sTitle.includes(cleanQuery)
+                        || sTitleZh.includes(cleanQuery)
+                        || architect.includes(cleanQuery)
+                        || location.includes(cleanQuery)
+                        || locationZh.includes(cleanQuery)
+                        || note.includes(cleanQuery)
+                        || tags.some(t => t.includes(cleanQuery));
+                });
+            }
+
+            renderDrawerItems(filtered, 'favorites', searchVal);
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('tabHistoryBtn').classList.remove('active');
+            document.getElementById('tabFavBtn').classList.remove('active');
+            document.getElementById('tabSettingsBtn').classList.remove('active');
+        }
+
+        async function loadHistoryList() {
+            const listEl = document.getElementById('drawerList');
+            listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">加载历史记录中...</div>';
+            try {
+                const res = await fetch('/api/architecture/history');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    renderDrawerItems(data.history || [], 'history');
+                }
+            } catch (err) {
+                listEl.innerHTML = '<div style="color: #ef4444; text-align: center;">加载失败</div>';
+            }
+        }
+
+        async function loadFavoritesList() {
+            const listEl = document.getElementById('drawerList');
+            listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">加载收藏中...</div>';
+            try {
+                const res = await fetch('/api/architecture/favorites');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    loadedFavorites = data.favorites || [];
+                    filterAndRenderFavorites();
+                }
+            } catch (err) {
+                listEl.innerHTML = '<div style="color: #ef4444; text-align: center;">加载失败</div>';
+            }
+        }
+
+        function renderDrawerItems(items, type, searchQuery = '') {
+            const listEl = document.getElementById('drawerList');
+            listEl.innerHTML = '';
+
+            if (items.length === 0) {
+                let msg = '暂无浏览历史';
+                if (type === 'favorites') {
+                    if (searchQuery && currentSelectedTag) {
+                        msg = `在「${escapeHtml(currentSelectedTag)}」标签下未找到匹配「${escapeHtml(searchQuery)}」的建筑`;
+                    } else if (searchQuery) {
+                        msg = `未找到与「${escapeHtml(searchQuery)}」相匹配的收藏建筑`;
+                    } else if (currentSelectedTag) {
+                        msg = `暂无「${escapeHtml(currentSelectedTag)}」标签的建筑收藏`;
+                    } else {
+                        msg = '收藏夹还是空的，在喜欢的建筑右上角点击收藏吧';
+                    }
+                }
+                listEl.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 40px 20px; font-family: serif; font-style: italic;">${msg}</div>`;
+                return;
+            }
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'drawer-item';
+                div.onclick = () => switchToProject(item.project_id || item.id);
+
+                const isFav = Boolean(item.is_favorite);
+                let titleText = item.structured_title || item.title || '建筑作品';
+                if (userSettings.language === 'zh') {
+                    titleText = item.structured_title_zh || item.structured_title || item.title_zh || item.title;
+                } else if (userSettings.language === 'en') {
+                    titleText = item.structured_title_en || item.structured_title || item.title_en || item.title;
+                }
+                const subText = (item.architect ? item.architect + ' · ' : '') + (item.year ? (userSettings.language === 'en' ? item.year : item.year + '年') : '');
+
+                let tagsHtml = '';
+                if (item.tags && Array.isArray(item.tags) && item.tags.length > 0) {
+                    tagsHtml = `<div class="drawer-item-tags">${item.tags.map(t => `<span class="item-tag-badge">#${escapeHtml(t)}</span>`).join('')}</div>`;
+                }
+
+                div.innerHTML = `
+                    <img class="drawer-item-thumb" src="${item.cover_image || ''}" alt="thumb">
+                    <div class="drawer-item-info">
+                        <div class="drawer-item-title">${escapeHtml(titleText)}</div>
+                        <div class="drawer-item-sub">${escapeHtml(subText)}</div>
+                        ${tagsHtml}
+                    </div>
+                    <button class="drawer-item-fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleDrawerItemFavorite('${item.project_id || item.id}', '${escapeHtml(titleText)}', this)">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    </button>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        async function toggleDrawerItemFavorite(pid, structuredTitle, btnEl) {
+            try {
+                const res = await fetch('/api/architecture/favorite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: pid,
+                        structured_title: structuredTitle,
+                        favorited_by: 'User'
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (data.is_favorite) {
+                        btnEl.classList.add('active');
+                        showToast('已加入收藏');
+                    } else {
+                        btnEl.classList.remove('active');
+                        showToast('已取消收藏');
+                    }
+                    if (currentProject && currentProject.id === pid) {
+                        const heroBtn = document.getElementById('heroFavBtn');
+                        if (data.is_favorite) heroBtn.classList.add('active');
+                        else heroBtn.classList.remove('active');
+                    }
+                    await loadCarouselList();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function switchToProject(pid) {
+            try {
+                const res = await fetch('/api/architecture/current', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_id: pid })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentProject = data.project;
+                    currentNotes = data.notes || [];
+                    renderHero(currentProject, data.is_favorite);
+                    renderNotes(currentNotes);
+                    closeDrawer();
+                    if (carouselProjects.length > 0) {
+                        const idx = carouselProjects.findIndex(p => p.id === currentProject.id);
+                        carouselCurrentIndex = idx;
+                    }
+                    updateCarouselBadge();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Render Settings & Manual Panel
+        function renderSettingsPanel() {
+            const listEl = document.getElementById('drawerList');
+            listEl.innerHTML = `
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>双方称谓设定</span>
+                    </div>
+                    <div class="settings-field">
+                        <label>你的名字 / 昵称：</label>
+                        <input type="text" class="settings-input" id="setUserName" value="${escapeHtml(userSettings.userName)}">
+                    </div>
+                    <div class="settings-field">
+                        <label>AI 伴侣名字：</label>
+                        <input type="text" class="settings-input" id="setCompanionName" value="${escapeHtml(userSettings.companionName)}">
+                    </div>
+                    <button class="btn btn-secondary" onclick="saveNameSettings()" style="width: 100%; justify-content: center; margin-top: 4px;">保存称呼</button>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                        <span>语言与文本展示</span>
+                    </div>
+                    <div class="radio-options">
+                        <div class="radio-chip ${userSettings.language === 'zh' ? 'active' : ''}" onclick="setLanguage('zh')">纯中文</div>
+                        <div class="radio-chip ${userSettings.language === 'bilingual' ? 'active' : ''}" onclick="setLanguage('bilingual')">中英双语</div>
+                        <div class="radio-chip ${userSettings.language === 'en' ? 'active' : ''}" onclick="setLanguage('en')">原生英文</div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span>系统说明与使用指南</span>
+                    </div>
+                    <div class="guide-box">
+                        <div class="guide-section">
+                            <div class="guide-heading">一、系统定位与数据来源</div>
+                            <div class="guide-text">本空间为用户与伴侣共同构建的私人建筑审美与生活记录模块。数据来源于 ArchDaily 公开建筑索引与结构化信息库，收录涵盖全球 6.5 万余座当代与经典建筑项目。</div>
+                        </div>
+
+                        <div class="guide-section">
+                            <div class="guide-heading">二、核心功能概览</div>
+                            <div class="guide-text">
+                                • <b>腰部画廊翻阅</b>：展品腰部文字说明两侧设有左右翻页按键（&lt; 与 &gt;），可在收藏夹与浏览历史中步进切换，大图、标题、中英简介、原文链接、便签与收藏状态全量联动。<br>
+                                • <b>全中文模式支持</b>：语言选择「纯中文」时，不仅简介翻译为中文，建筑标题、结构化索引（[国家·城市] 建筑名 · 事务所）及坐标地点均自动切换为中文展示。<br>
+                                • <b>纸质便签与单条删除</b>：大图正下方可点击「贴张便签」发表感想，每条便签支持点击小垃圾桶按钮并在确认后安全删除；支持一键全部收起或展开。<br>
+                                • <b>漫游与安利推荐</b>：点击顶栏「漫游」标签可随机探索新奇建筑；点击「转给他」将即时置顶于大图并加入推荐队列。
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <div class="guide-heading">三、AI 伴侣端 MCP 工具套件</div>
+                            <div class="guide-text">
+                                后端已为 AI 伴侣部署独立的 Architecture MCP 服务（建筑漫游），伴侣可自主调用以下接口：<br>
+                                • <code>search_architecture</code>：按风格、城市、年份或关键词检索全球建筑（支持多模态视觉赏析）；<br>
+                                • <code>random_architecture</code>：自主漫游建筑库探索灵感；<br>
+                                • <code>get_current_display</code>：读取大图当前展示的建筑信息与多视角立面图；<br>
+                                • <code>write_note</code>：在大图下方回复并贴上纸质便签；<br>
+                                • <code>check_recommendations</code>：读取伴侣通过「转给他」安利推荐的建筑列表；<br>
+                                • <code>share_to_big_display</code>：搜寻建筑并推送至前端大图展品，伴随专属便签；<br>
+                                • <code>favorite_architecture</code> / <code>list_favorite_architectures</code>：管理与检索结构化建筑收藏（支持多标签分类筛选）。
+                            </div>
+                        </div>
+
+                        <div class="guide-section">
+                            <div class="guide-heading">四、版权与非商业声明</div>
+                            <div class="guide-text">本系统展示的所有建筑摄影、设计图纸及文本描述版权均归原建筑师、摄影师及原版权方所有。本模块仅供个人非营利性学习、建筑审美交流与伴侣陪伴使用，严禁用于任何商业用途或公开传播。</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveNameSettings() {
+            const u = document.getElementById('setUserName').value.trim() || '我';
+            const c = document.getElementById('setCompanionName').value.trim() || 'AI伴侣';
+            userSettings.userName = u;
+            userSettings.companionName = c;
+            localStorage.setItem('dhome_arch_username', u);
+            localStorage.setItem('dhome_arch_companion', c);
+            showToast('称谓已保存！');
+            renderNotes(currentNotes);
+        }
+
+        function setLanguage(lang) {
+            userSettings.language = lang;
+            localStorage.setItem('dhome_arch_lang', lang);
+            renderSettingsPanel();
+            if (currentProject) renderHero(currentProject, isFavorite(currentProject.id));
+            if (currentDrawerMode === 'history') loadHistoryList();
+            if (currentDrawerMode === 'favorites') loadFavoritesList();
+            if (currentRandomProject) renderModalContent(currentRandomProject, isFavorite(currentRandomProject.id));
+            showToast(`已切换为：${lang === 'zh' ? '纯中文' : lang === 'bilingual' ? '中英双语' : '原生英文'}`);
+        }
+
+        function isFavorite(pid) {
+            const btn = document.getElementById('heroFavBtn');
+            return btn.classList.contains('active');
+        }
+
+        // "漫游" (Browse Random Project Modal - No '设为展品' button)
+        async function openRandomModal() {
+            document.getElementById('randomModal').classList.add('open');
+            await fetchNextRandom();
+        }
+
+        function closeRandomModal(e) {
+            if (!e || e.target.id === 'randomModal' || e.target.closest('.drawer-close') || e.target.innerText === '关闭') {
+                document.getElementById('randomModal').classList.remove('open');
+            }
+        }
+
+        async function fetchNextRandom() {
+            const titleEl = document.getElementById('modalStructuredTitle');
+            titleEl.innerText = '[正在漫游探索中...]';
+            try {
+                const res = await fetch('/api/architecture/random');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentRandomProject = data.project;
+                    renderModalContent(currentRandomProject, data.is_favorite);
+                }
+            } catch (err) {
+                console.error(err);
+                titleEl.innerText = '[加载失败，请再抽一次]';
+            }
+        }
+
+        function renderModalContent(p, isFav) {
+            let structuredTitle = p.structured_title || p.title;
+            let displayTitle = p.title || '建筑作品';
+            let displayLocation = p.location || p.city || p.country || '全球';
+
+            if (userSettings.language === 'zh') {
+                structuredTitle = p.structured_title_zh || p.structured_title || p.title_zh || p.title;
+                displayTitle = p.title_zh || p.title || '建筑作品';
+                displayLocation = p.location_zh || p.location || p.city || p.country || '全球';
+            } else if (userSettings.language === 'en') {
+                structuredTitle = p.structured_title_en || p.structured_title || p.title_en || p.title;
+                displayTitle = p.title_en || p.title || 'Architecture';
+                displayLocation = p.location_en || p.location || p.city || p.country || 'Global';
+            } else if (userSettings.language === 'bilingual') {
+                structuredTitle = p.structured_title_zh || p.structured_title;
+                displayTitle = (p.title_zh && p.title_en && p.title_zh !== p.title_en)
+                    ? `${p.title_zh} / ${p.title_en}`
+                    : (p.title_zh || p.title);
+                displayLocation = (p.location_zh && p.location_en && p.location_zh !== p.location_en)
+                    ? `${p.location_zh} (${p.location_en})`
+                    : (p.location_zh || p.location);
+            }
+
+            document.getElementById('modalStructuredTitle').innerText = structuredTitle;
+            document.getElementById('modalTitle').innerText = displayTitle;
+            document.getElementById('modalImage').src = p.cover_image || '';
+            document.getElementById('modalArchitect').innerText = p.architect || '未知建筑师';
+            document.getElementById('modalLocation').innerText = displayLocation;
+            document.getElementById('modalYear').innerText = p.year ? (userSettings.language === 'en' ? p.year : p.year + '年') : (userSettings.language === 'en' ? 'Recent' : '近代');
+
+            const descEl = document.getElementById('modalDesc');
+            const linkEl = document.getElementById('modalSourceLink');
+
+            let descText = '';
+            const zhText = p.description_zh || p.description || '';
+            const enText = p.description_en || '';
+
+            if (userSettings.language === 'en') {
+                descText = enText || zhText;
+            } else if (userSettings.language === 'bilingual' && zhText && enText && zhText !== enText) {
+                descText = `${zhText}\n\n[EN] ${enText}`;
+            } else {
+                descText = zhText || enText || '精选现代建筑设计作品。';
+            }
+
+            descEl.innerText = descText;
+
+            if (p.source_url) {
+                linkEl.href = p.source_url;
+                linkEl.style.display = 'inline-flex';
+            } else {
+                linkEl.style.display = 'none';
+            }
+
+            const favBtn = document.getElementById('modalFavBtn');
+            if (isFav) favBtn.classList.add('active');
+            else favBtn.classList.remove('active');
+        }
+
+        async function toggleModalFavorite() {
+            if (!currentRandomProject) return;
+            try {
+                let tags = null;
+                const modalBtn = document.getElementById('modalFavBtn');
+                const willFavorite = !modalBtn.classList.contains('active');
+                if (willFavorite) {
+                    const prefill = (currentRandomProject.tags || []).slice(0, 3).join(', ');
+                    const tagsInput = prompt('为这座建筑添加分类标签（可选，多个标签用逗号隔开，如：清水混凝土, 光影, 教堂）：', prefill);
+                    if (tagsInput !== null && tagsInput.trim()) {
+                        tags = tagsInput.split(/[,， ]+/).map(t => t.trim()).filter(Boolean);
+                    } else if (tagsInput !== null) {
+                        tags = (currentRandomProject.tags || []).slice(0, 3);
+                    }
+                }
+
+                const res = await fetch('/api/architecture/favorite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: currentRandomProject.id,
+                        structured_title: currentRandomProject.structured_title,
+                        favorited_by: 'User',
+                        tags: tags
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (data.is_favorite) {
+                        modalBtn.classList.add('active');
+                        showToast('已加入你的建筑收藏');
+                    } else {
+                        modalBtn.classList.remove('active');
+                        showToast('已取消收藏');
+                    }
+                    await loadCarouselList();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Daemon Shares Notification Polling
+        let latestDaemonShare = null;
+
+        async function checkDaemonShares() {
+            try {
+                const res = await fetch('/api/architecture/daemon-shares?unread_only=true');
+                const data = await res.json();
+                if (data.status === 'success' && data.shares && data.shares.length > 0) {
+                    latestDaemonShare = data.shares[0];
+                    const banner = document.getElementById('daemonShareBanner');
+                    const textEl = document.getElementById('daemonShareText');
+                    const sTitle = latestDaemonShare.structured_title || latestDaemonShare.title || '建筑作品';
+                    const cName = userSettings.companionName || 'AI伴侣';
+                    textEl.innerText = `收到来自 ${cName} 的 ${data.shares.length} 个新分享！「${sTitle}」`;
+                    banner.style.display = 'flex';
+                } else {
+                    const banner = document.getElementById('daemonShareBanner');
+                    if (banner) banner.style.display = 'none';
+                }
+            } catch (err) {
+                // quiet background poll
+            }
+        }
+
+        async function viewDaemonShare() {
+            if (!latestDaemonShare) return;
+            const pid = latestDaemonShare.project_id;
+            try {
+                await fetch('/api/architecture/daemon-shares/mark-all-read', { method: 'POST' });
+            } catch (e) {}
+            dismissDaemonShare();
+            await switchToProject(pid);
+            showToast('已切换至分享建筑，快来看看便签吧！');
+            const stream = document.getElementById('notesStream');
+            if (stream) {
+                stream.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function dismissDaemonShare() {
+            const banner = document.getElementById('daemonShareBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        // "转给他" (Sets immediately to Big Hero Display + forwards to Companion)
+        async function recommendCurrentRandomToDaemon() {
+            if (!currentRandomProject) return;
+            try {
+                await switchToProject(currentRandomProject.id);
+
+                const res = await fetch('/api/architecture/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: currentRandomProject.id,
+                        user_note: `${userSettings.userName}在建筑漫游里看到了「${currentRandomProject.structured_title}」，特意安利给你！快去看看并给她留张便签吧~`
+                    })
+                });
+
+                closeRandomModal();
+                showToast(`已展示在大图，并成功转给 ${userSettings.companionName}！他稍后会来看~`);
+                await loadCarouselList();
+            } catch (err) {
+                console.error(err);
+                showToast('转交推荐失败');
+            }
+        }
+
+        // First-Time Onboarding Setup
+        function checkFirstTimeVisit() {
+            const storedUser = localStorage.getItem('dhome_arch_username');
+            const storedCompanion = localStorage.getItem('dhome_arch_companion');
+            if (!storedUser || !storedCompanion) {
+                const modal = document.getElementById('onboardingModal');
+                if (modal) modal.classList.add('open');
+                const uInput = document.getElementById('onboardUserName');
+                const cInput = document.getElementById('onboardCompanionName');
+                if (uInput) uInput.value = storedUser || '我';
+                if (cInput) cInput.value = storedCompanion || 'AI伴侣';
+            }
+        }
+
+        function finishOnboarding() {
+            const uName = (document.getElementById('onboardUserName').value || '我').trim();
+            const cName = (document.getElementById('onboardCompanionName').value || 'AI伴侣').trim();
+            userSettings.userName = uName;
+            userSettings.companionName = cName;
+            localStorage.setItem('dhome_arch_username', uName);
+            localStorage.setItem('dhome_arch_companion', cName);
+
+            const uInput = document.getElementById('settingUserName');
+            const cInput = document.getElementById('settingCompanionName');
+            if (uInput) uInput.value = uName;
+            if (cInput) cInput.value = cName;
+
+            const modal = document.getElementById('onboardingModal');
+            if (modal) modal.classList.remove('open');
+            showToast(`设置成功！欢迎开启建筑漫游`);
+            if (currentProject) {
+                renderHero(currentProject, document.getElementById('heroFavBtn').classList.contains('active'));
+            }
+        }
+
+        // Initial Boot
+        checkFirstTimeVisit();
+        loadCurrentProject();
+        checkDaemonShares();
+        setInterval(checkDaemonShares, 25000);
+    </script>
+</body>
+</html>
