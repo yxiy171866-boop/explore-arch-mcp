@@ -4,6 +4,7 @@
 Data persistence, ArchDaily integration, translation, sticky notes, and favorites management.
 """
 
+import functools
 import json
 import os
 import random
@@ -11,6 +12,7 @@ import re
 import sqlite3
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -27,6 +29,7 @@ def get_db():
     return conn
 
 
+@functools.lru_cache(maxsize=1024)
 def translate_to_zh(text: str) -> str:
     """自动将英文简介翻译为优美中文"""
     if not text or not text.strip():
@@ -49,6 +52,7 @@ def translate_to_zh(text: str) -> str:
         return text
 
 
+@functools.lru_cache(maxsize=1024)
 def translate_to_en(text: str) -> str:
     """自动将中文搜索词翻译为精准英文"""
     if not text or not text.strip():
@@ -165,6 +169,14 @@ def init_db():
             value TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS ai_shares (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL,
+            is_read INTEGER DEFAULT 0
+        );
+
         CREATE TABLE IF NOT EXISTS daemon_shares (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id TEXT NOT NULL,
@@ -207,7 +219,7 @@ def _seed_default_project(conn):
     location = "Ibaraki, Osaka, Japan"
     country = "日本"
     city = "大阪"
-    year = "1999"
+    year = "1989"
     cover_image = "https://images.adsttc.com/media/images/5037/f3cd/28ba/0d59/9b00/064c/large_jpg/stringio.jpg?1414206110"
     images = [
         "https://images.adsttc.com/media/images/5037/f3cd/28ba/0d59/9b00/064c/large_jpg/stringio.jpg?1414206110",
@@ -313,8 +325,6 @@ def parse_archdaily_project(raw: Dict[str, Any]) -> Dict[str, Any]:
                 images.append(u)
 
     desc_raw = str(raw.get("meta_description") or raw.get("description") or "").strip()
-    desc_zh = translate_to_zh(desc_raw)
-
     tags = [t.get("name") for t in (raw.get("tags") or []) if isinstance(t, dict) and t.get("name")]
 
     structured_title = _format_structured_title({
@@ -325,10 +335,17 @@ def parse_archdaily_project(raw: Dict[str, Any]) -> Dict[str, Any]:
         "city": city
     })
 
-    # Chinese translations for full Chinese mode
-    title_zh = translate_to_zh(clean_title)
-    structured_title_zh = translate_to_zh(structured_title)
-    location_zh = translate_to_zh(loc) if loc else ""
+    # Parallelize translations to prevent latency bottlenecks
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        f_desc = executor.submit(translate_to_zh, desc_raw)
+        f_title = executor.submit(translate_to_zh, clean_title)
+        f_stitle = executor.submit(translate_to_zh, structured_title)
+        f_loc = executor.submit(translate_to_zh, loc) if loc else None
+
+        desc_zh = f_desc.result()
+        title_zh = f_title.result()
+        structured_title_zh = f_stitle.result()
+        location_zh = f_loc.result() if f_loc else ""
 
     return {
         "id": f"ad-{doc_id}",
@@ -746,31 +763,50 @@ def get_favorite_tags() -> List[str]:
         return sorted(list(tags_set))
 
 
-def add_daemon_share(project_id: str, note: Optional[str] = None) -> Dict[str, Any]:
+def add_ai_share(project_id: str, note: Optional[str] = None) -> Dict[str, Any]:
     now = datetime.now().isoformat()
     with get_db() as conn:
         # Mark previous unread shares as read so new share cleanly supersedes previous
-        conn.execute("UPDATE daemon_shares SET is_read = 1 WHERE is_read = 0")
+        conn.execute("UPDATE ai_shares SET is_read = 1 WHERE is_read = 0")
+        try:
+            conn.execute("UPDATE daemon_shares SET is_read = 1 WHERE is_read = 0")
+        except Exception:
+            pass
         cursor = conn.execute("""
-        INSERT INTO daemon_shares (project_id, note, created_at, is_read)
+        INSERT INTO ai_shares (project_id, note, created_at, is_read)
         VALUES (?, ?, ?, 0)
         """, (project_id, note or "", now))
         conn.commit()
         share_id = cursor.lastrowid
     return {"id": share_id, "project_id": project_id, "note": note, "created_at": now}
 
+add_daemon_share = add_ai_share
 
-def get_daemon_shares(unread_only: bool = True) -> List[Dict[str, Any]]:
+
+def get_ai_shares(unread_only: bool = True) -> List[Dict[str, Any]]:
     with get_db() as conn:
         sql = """
         SELECT s.*, p.title, p.structured_title, p.cover_image, p.architect, p.location
-        FROM daemon_shares s
+        FROM ai_shares s
         JOIN projects p ON s.project_id = p.id
         """
         if unread_only:
             sql += " WHERE s.is_read = 0"
         sql += " ORDER BY s.id DESC"
         rows = conn.execute(sql).fetchall()
+        if not rows:
+            try:
+                legacy_sql = """
+                SELECT s.*, p.title, p.structured_title, p.cover_image, p.architect, p.location
+                FROM daemon_shares s
+                JOIN projects p ON s.project_id = p.id
+                """
+                if unread_only:
+                    legacy_sql += " WHERE s.is_read = 0"
+                legacy_sql += " ORDER BY s.id DESC"
+                rows = conn.execute(legacy_sql).fetchall()
+            except Exception:
+                pass
         return [
             {
                 "id": r["id"],
@@ -787,30 +823,45 @@ def get_daemon_shares(unread_only: bool = True) -> List[Dict[str, Any]]:
             for r in rows
         ]
 
+get_daemon_shares = get_ai_shares
 
-def mark_daemon_share_read(share_id: int) -> bool:
+
+def mark_ai_share_read(share_id: int) -> bool:
     with get_db() as conn:
-        res = conn.execute("UPDATE daemon_shares SET is_read = 1 WHERE id = ?", (share_id,))
+        res = conn.execute("UPDATE ai_shares SET is_read = 1 WHERE id = ?", (share_id,))
+        try:
+            conn.execute("UPDATE daemon_shares SET is_read = 1 WHERE id = ?", (share_id,))
+        except Exception:
+            pass
         conn.commit()
         return res.rowcount > 0
 
+mark_daemon_share_read = mark_ai_share_read
 
-def mark_all_daemon_shares_read() -> bool:
+
+def mark_all_ai_shares_read() -> bool:
     with get_db() as conn:
-        conn.execute("UPDATE daemon_shares SET is_read = 1 WHERE is_read = 0")
+        conn.execute("UPDATE ai_shares SET is_read = 1 WHERE is_read = 0")
+        try:
+            conn.execute("UPDATE daemon_shares SET is_read = 1 WHERE is_read = 0")
+        except Exception:
+            pass
         conn.commit()
         return True
 
+mark_all_daemon_shares_read = mark_all_ai_shares_read
+
 
 def list_history(limit: int = 50) -> List[Dict[str, Any]]:
+    safe_limit = max(1, min(int(limit), 100))
     with get_db() as conn:
-        rows = conn.execute(f"""
+        rows = conn.execute("""
         SELECT h.id as history_id, h.viewed_at, p.*
         FROM history h
         JOIN projects p ON h.project_id = p.id
         ORDER BY h.id DESC
-        LIMIT {limit}
-        """).fetchall()
+        LIMIT ?
+        """, (safe_limit,)).fetchall()
 
         seen = set()
         output = []
@@ -858,7 +909,7 @@ def list_carousel_projects() -> List[Dict[str, Any]]:
     return items
 
 
-def recommend_to_daemon(project_id: str, user_note: Optional[str] = None) -> Dict[str, Any]:
+def recommend_to_ai(project_id: str, user_note: Optional[str] = None) -> Dict[str, Any]:
     now = datetime.now().isoformat()
     with get_db() as conn:
         conn.execute("""
@@ -866,7 +917,9 @@ def recommend_to_daemon(project_id: str, user_note: Optional[str] = None) -> Dic
         VALUES (?, ?, 'pending', ?)
         """, (project_id, user_note or "向你推荐了这座精选建筑，快来看看吧！", now))
         conn.commit()
-    return {"status": "success", "message": "已成功转给伴侣，TA稍后会来查看！"}
+    return {"status": "success", "message": "已成功转给 AI 伴侣，TA稍后会来查看！"}
+
+recommend_to_daemon = recommend_to_ai
 
 
 def get_pending_recommendations() -> List[Dict[str, Any]]:

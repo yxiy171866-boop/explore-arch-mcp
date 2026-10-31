@@ -18,7 +18,7 @@ app = FastAPI(title="Architecture Companion Web UI", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +70,8 @@ def get_index():
 def read_current():
     try:
         p = service.get_current_project()
+        if not p:
+            raise HTTPException(status_code=404, detail="No project found")
         notes = service.get_notes(p["id"])
         is_fav = service.is_favorite(p["id"])
         return {
@@ -78,6 +80,8 @@ def read_current():
             "notes": notes,
             "is_favorite": is_fav,
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -87,6 +91,8 @@ def update_current(req: SwitchDisplayRequest):
     try:
         service.set_current_project(req.project_id)
         p = service.get_current_project()
+        if not p:
+            raise HTTPException(status_code=404, detail="No project found")
         notes = service.get_notes(p["id"])
         is_fav = service.is_favorite(p["id"])
         return {
@@ -95,6 +101,8 @@ def update_current(req: SwitchDisplayRequest):
             "notes": notes,
             "is_favorite": is_fav,
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -214,25 +222,27 @@ def read_carousel():
 @app.post("/api/architecture/recommend")
 def send_recommendation(req: RecommendRequest):
     try:
-        rec = service.recommend_to_daemon(req.project_id, req.user_note)
+        rec = service.recommend_to_ai(req.project_id, req.user_note)
         return {"status": "success", "recommendation": rec}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@app.get("/api/architecture/ai-shares")
 @app.get("/api/architecture/daemon-shares")
-def read_daemon_shares(unread_only: bool = Query(True)):
+def read_ai_shares(unread_only: bool = Query(True)):
     try:
-        shares = service.get_daemon_shares(unread_only=unread_only)
+        shares = service.get_ai_shares(unread_only=unread_only)
         return {"status": "success", "shares": shares}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+@app.post("/api/architecture/ai-shares/mark-all-read")
 @app.post("/api/architecture/daemon-shares/mark-all-read")
 def mark_all_shares_read():
     try:
-        service.mark_all_daemon_shares_read()
+        service.mark_all_ai_shares_read()
         return {"status": "success"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
@@ -240,6 +250,6 @@ def mark_all_shares_read():
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Architecture Companion Web App starting at http://localhost:8000")
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    print("Architecture Companion Web App starting at http://127.0.0.1:8000")
+    uvicorn.run("app:app", host="127.0.0.1", port=8000)
 

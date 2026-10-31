@@ -1865,12 +1865,20 @@
                 const data = await res.json();
                 const tags = (data.status === 'success' && data.tags) ? data.tags : [];
                 
-                let html = `<button class="tag-chip ${!currentSelectedTag ? 'active' : ''}" onclick="selectFavoriteTag(null)">全部</button>`;
+                container.innerHTML = '';
+                const allBtn = document.createElement('button');
+                allBtn.className = `tag-chip ${!currentSelectedTag ? 'active' : ''}`;
+                allBtn.innerText = '全部';
+                allBtn.onclick = () => selectFavoriteTag(null);
+                container.appendChild(allBtn);
+
                 tags.forEach(t => {
-                    const isActive = currentSelectedTag === t;
-                    html += `<button class="tag-chip ${isActive ? 'active' : ''}" onclick="selectFavoriteTag('${escapeHtml(t)}')">#${escapeHtml(t)}</button>`;
+                    const btn = document.createElement('button');
+                    btn.className = `tag-chip ${currentSelectedTag === t ? 'active' : ''}`;
+                    btn.innerText = '#' + t;
+                    btn.onclick = () => selectFavoriteTag(t);
+                    container.appendChild(btn);
                 });
-                container.innerHTML = html;
             } catch (err) {
                 console.error(err);
             }
@@ -2016,16 +2024,23 @@
                 }
 
                 div.innerHTML = `
-                    <img class="drawer-item-thumb" src="${item.cover_image || ''}" alt="thumb">
+                    <img class="drawer-item-thumb" src="${escapeHtml(item.cover_image || '')}" alt="thumb">
                     <div class="drawer-item-info">
                         <div class="drawer-item-title">${escapeHtml(titleText)}</div>
                         <div class="drawer-item-sub">${escapeHtml(subText)}</div>
                         ${tagsHtml}
                     </div>
-                    <button class="drawer-item-fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleDrawerItemFavorite('${item.project_id || item.id}', '${escapeHtml(titleText)}', this)">
+                    <button class="drawer-item-fav-btn ${isFav ? 'active' : ''}" title="收藏">
                         <svg class="svg-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                     </button>
                 `;
+                const favBtn = div.querySelector('.drawer-item-fav-btn');
+                if (favBtn) {
+                    favBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleDrawerItemFavorite(item.project_id || item.id, titleText, favBtn);
+                    });
+                }
                 listEl.appendChild(div);
             });
         }
@@ -2325,7 +2340,7 @@
 
         async function checkDaemonShares() {
             try {
-                const res = await fetch('/api/architecture/daemon-shares?unread_only=true');
+                const res = await fetch('/api/architecture/ai-shares?unread_only=true');
                 const data = await res.json();
                 if (data.status === 'success' && data.shares && data.shares.length > 0) {
                     latestDaemonShare = data.shares[0];
@@ -2348,7 +2363,7 @@
             if (!latestDaemonShare) return;
             const pid = latestDaemonShare.project_id;
             try {
-                await fetch('/api/architecture/daemon-shares/mark-all-read', { method: 'POST' });
+                await fetch('/api/architecture/ai-shares/mark-all-read', { method: 'POST' });
             } catch (e) {}
             dismissDaemonShare();
             await switchToProject(pid);

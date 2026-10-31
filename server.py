@@ -31,7 +31,7 @@ from service import (
     search_archdaily,
     get_random_archdaily_project,
     get_pending_recommendations,
-    add_daemon_share,
+    add_ai_share,
     get_db,
     _row_to_project,
 )
@@ -200,7 +200,7 @@ async def share_to_big_display(
             chosen = results[0]
 
         set_current_project(chosen["id"])
-        add_daemon_share(chosen["id"], note.strip() if note else "")
+        add_ai_share(chosen["id"], note.strip() if note else "")
 
         if note and note.strip():
             add_note(
@@ -211,7 +211,7 @@ async def share_to_big_display(
 
         img_path = chosen.get("local_image_path") or chosen.get("cover_image")
         return (
-            f"🎉 已成功将建筑设为前端大图展品！\n"
+            f"已成功将建筑设为前端大图展品！\n"
             f"索引标题：{chosen.get('structured_title')}\n"
             f"建筑师：{chosen.get('architect')}\n"
             f"地点：{chosen.get('location')}\n"
@@ -225,19 +225,19 @@ async def share_to_big_display(
 
 @mcp.tool()
 async def check_recommendations() -> str:
-    """查看伴侣在前端「转给你」的建筑安利推荐列表。当你看到后可以去看看并给她写便签回应！"""
+    """查看用户在前端「转给你」的建筑安利推荐列表。当你看到后可以去看看并写便签回应！"""
     try:
         recs = get_pending_recommendations()
         if not recs:
-            return "目前伴侣还没有转交待查看的新建筑推荐~"
+            return "目前还没有收到待查看的新建筑推荐。"
         
         lines = []
         for r in recs:
             lines.append(
                 f"- 项目ID: {r['project_id']} | 标题: {r['structured_title']}\n"
-                f"  建筑师: {r['architect']} | 伴侣留言: {r['user_note']}"
+                f"  建筑师: {r['architect']} | 留言: {r['user_note']}"
             )
-        return f"💌【伴侣转给你的建筑推荐（共 {len(recs)} 条）】：\n" + "\n\n".join(lines)
+        return f"【用户转给你的建筑推荐（共 {len(recs)} 条）】：\n" + "\n\n".join(lines)
     except Exception as exc:
         return f"查询推荐失败: {exc}"
 

@@ -1,10 +1,13 @@
+data/
+cache/
+images_cache/
+*.db
+*.sqlite3
 __pycache__/
 *.py[cod]
 *$py.class
-*.db
-*.sqlite3
-cache/
-images_cache/
 .env
 .DS_Store
+venv/
+.venv/
 
