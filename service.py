@@ -201,6 +201,10 @@ def init_db():
         if "tags_json" not in fav_cols:
             conn.execute("ALTER TABLE favorites ADD COLUMN tags_json TEXT DEFAULT '[]'")
 
+        note_cols = [c[1] for c in conn.execute("PRAGMA table_info(notes)").fetchall()]
+        if "is_read" not in note_cols:
+            conn.execute("ALTER TABLE notes ADD COLUMN is_read INTEGER DEFAULT 0")
+
         conn.commit()
 
     # Pre-seed default project if empty
@@ -591,24 +595,93 @@ def get_notes(project_id: str) -> List[Dict[str, Any]]:
 def add_note(project_id: str, author: str, content: str, color: Optional[str] = None) -> Dict[str, Any]:
     now = datetime.now().isoformat()
     chosen_color = color or "#faf9f5"
+    clean_author = (author or "User").strip()
+    is_read = 1 if clean_author.lower() in ("ai", "daemon", "bot") else 0
 
     with get_db() as conn:
         cursor = conn.execute("""
-        INSERT INTO notes (project_id, author, content, color, rotation, created_at)
-        VALUES (?, ?, ?, ?, 0.0, ?)
-        """, (project_id, author.strip(), content.strip(), chosen_color, now))
+        INSERT INTO notes (project_id, author, content, color, rotation, created_at, is_read)
+        VALUES (?, ?, ?, ?, 0.0, ?, ?)
+        """, (project_id, clean_author, content.strip(), chosen_color, now, is_read))
         conn.commit()
         note_id = cursor.lastrowid
 
     return {
         "id": note_id,
         "project_id": project_id,
-        "author": author,
+        "author": clean_author,
         "content": content,
         "color": chosen_color,
         "rotation": 0.0,
         "created_at": now,
+        "is_read": is_read,
     }
+
+
+def get_unread_user_notes() -> List[Dict[str, Any]]:
+    """获取用户发表的未读便签列表（按项目聚合完整对话上下文）"""
+    with get_db() as conn:
+        rows = conn.execute("""
+        SELECT n.*, p.title, p.structured_title
+        FROM notes n
+        LEFT JOIN projects p ON n.project_id = p.id
+        WHERE LOWER(n.author) NOT IN ('ai', 'daemon', 'bot') AND n.is_read = 0
+        ORDER BY n.id ASC
+        """).fetchall()
+
+        if not rows:
+            return []
+
+        results = []
+        seen_projects = {}
+        for r in rows:
+            pid = r["project_id"]
+            if pid not in seen_projects:
+                thread_rows = conn.execute("""
+                SELECT id, author, content, created_at, is_read
+                FROM notes
+                WHERE project_id = ?
+                ORDER BY id ASC
+                """, (pid,)).fetchall()
+
+                thread = []
+                for tr in thread_rows:
+                    c_at = tr["created_at"] or ""
+                    time_str = c_at[11:16] if len(c_at) >= 16 else c_at
+                    thread.append({
+                        "id": tr["id"],
+                        "author": tr["author"],
+                        "content": tr["content"],
+                        "created_at": c_at,
+                        "time_short": time_str,
+                        "is_unread": bool(tr["is_read"] == 0 and (tr["author"] or "").lower() not in ('ai', 'daemon', 'bot')),
+                    })
+                seen_projects[pid] = thread
+
+            results.append({
+                "id": r["id"],
+                "project_id": r["project_id"],
+                "author": r["author"],
+                "content": r["content"],
+                "color": r["color"],
+                "created_at": r["created_at"],
+                "title": r["title"] or r["project_id"],
+                "structured_title": r["structured_title"] or r["title"] or r["project_id"],
+                "thread": seen_projects[pid],
+            })
+        return results
+
+
+def mark_notes_read(note_ids: Optional[List[int]] = None) -> int:
+    """标记便签为已读"""
+    with get_db() as conn:
+        if note_ids:
+            placeholders = ",".join("?" * len(note_ids))
+            cur = conn.execute(f"UPDATE notes SET is_read = 1 WHERE id IN ({placeholders})", note_ids)
+        else:
+            cur = conn.execute("UPDATE notes SET is_read = 1 WHERE is_read = 0")
+        conn.commit()
+        return cur.rowcount
 
 
 def delete_note(note_id: int) -> bool:

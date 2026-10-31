@@ -32,6 +32,8 @@ from service import (
     get_random_archdaily_project,
     get_pending_recommendations,
     add_ai_share,
+    get_unread_user_notes,
+    mark_notes_read,
     get_db,
     _row_to_project,
 )
@@ -298,6 +300,82 @@ async def favorite_architecture(
             return f"已从收藏夹中移出「{s_title}」。"
     except Exception as exc:
         return f"收藏操作失败: {exc}"
+
+
+@mcp.tool()
+async def check_unread_notes() -> str:
+    """查看用户在各建筑展品下方留下的最新便签留言，以及对应的便签墙完整对话流上下文。"""
+    try:
+        notes = get_unread_user_notes()
+        if not notes:
+            return "目前还没有未读的新便签留言~"
+        
+        seen_pids = set()
+        blocks = []
+        for n in notes:
+            pid = n.get("project_id")
+            if pid in seen_pids:
+                continue
+            seen_pids.add(pid)
+            title = n.get("structured_title") or n.get("title") or pid
+            thread = n.get("thread") or []
+            
+            thread_lines = []
+            for item in thread:
+                author = item.get("author") or "未知"
+                time_t = item.get("time_short") or ""
+                unread_tag = " ⭐[最新未读]" if item.get("is_unread") else ""
+                thread_lines.append(f"    • [{time_t}] {author}: {item.get('content')}{unread_tag}")
+
+            blocks.append(
+                f"🏛️ 建筑：{title} (项目ID: {pid})\n"
+                f"  📝 便签墙完整对话流（共 {len(thread)} 条）：\n" + "\n".join(thread_lines)
+            )
+
+        return f"💌【用户留给你的便签讨论动态（共 {len(blocks)} 个建筑项目有新动态）】：\n\n" + "\n\n".join(blocks)
+    except Exception as exc:
+        return f"查询便签失败: {exc}"
+
+
+@mcp.tool()
+async def get_project_notes(project_id: str) -> str:
+    """查看指定建筑项目下的完整便签墙留言列表与历史讨论。
+    
+    参数:
+    - project_id: 建筑项目ID（如 'ad-church-of-the-light'）
+    """
+    if not project_id or not project_id.strip():
+        return "请提供建筑项目ID。"
+    try:
+        notes = get_notes(project_id.strip())
+        if not notes:
+            return f"项目 {project_id} 下目前暂无任何便签留言。"
+        lines = []
+        for i, n in enumerate(notes):
+            c_at = n.get("created_at") or ""
+            time_str = c_at[11:16] if len(c_at) >= 16 else c_at
+            lines.append(f"{i+1}. [{time_str}] {n.get('author')}: {n.get('content')}")
+        return f"📝【项目 {project_id} 便签墙历史（共 {len(notes)} 条）】：\n" + "\n".join(lines)
+    except Exception as exc:
+        return f"获取项目便签失败: {exc}"
+
+
+@mcp.tool()
+async def reply_note_on_project(project_id: str, content: str) -> str:
+    """在指定建筑项目下贴上你的便签回复，并自动将该建筑下用户的历史便签标记为已读。
+    
+    参数:
+    - project_id: 建筑项目ID（如 'ad-church-of-the-light'）
+    - content: 你的回复内容
+    """
+    if not content or not content.strip():
+        return "回复内容不能为空。"
+    try:
+        note = add_note(project_id=project_id.strip(), author="AI", content=content.strip())
+        mark_notes_read()
+        return f"✅ 已成功在项目 {project_id} 贴上便签回复！\n内容：{content.strip()}"
+    except Exception as exc:
+        return f"回复便签失败: {exc}"
 
 
 if __name__ == "__main__":
